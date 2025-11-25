@@ -2,6 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CardPack, Card } from '../types';
 import { SmartImage } from './SmartImage';
+import { Sparkles, X, Volume2, VolumeX } from 'lucide-react';
+import { AUDIO_SOURCES } from '../constants';
 
 interface DrawAnimationProps {
   pack: CardPack;
@@ -13,45 +15,129 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
   const [stage, setStage] = useState<'VIDEO' | 'FLASH' | 'REVEAL'>('VIDEO');
   const [showFlash, setShowFlash] = useState(false);
   
-  // Logic: Default to local 'draw.mp4'. If it fails, fallback to pack.videoUrl.
+  // Gyro State
+  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+  
+  // Multi-pull preview state
+  const [previewCard, setPreviewCard] = useState<Card | null>(null);
+
+  // Video State
   const [videoSrc, setVideoSrc] = useState<string>('/videos/draw.mp4');
+  const [isMuted, setIsMuted] = useState(false); // Track if browser forced mute
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Single card shortcut for easier conditional rendering
   const isSingle = resultCards.length === 1;
   const singleCard = resultCards[0];
+  const hasHighRarity = resultCards.some(c => c.rarity === 'UR' || c.rarity === 'SSR');
+
+  // --- AUDIO LOGIC ---
+  const playAudio = (localPath: string, remoteFallback: string) => {
+    // Try to play local first
+    const audio = new Audio(localPath);
+    audio.volume = 0.5;
+    
+    const playPromise = audio.play();
+    
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Local failed, try remote
+        const remoteAudio = new Audio(remoteFallback);
+        remoteAudio.volume = 0.5;
+        remoteAudio.play().catch(e => console.error("Audio playback failed:", e));
+      });
+    }
+  };
 
   useEffect(() => {
     // Attempt to play whenever the videoSrc changes or component mounts
     if (stage === 'VIDEO' && videoRef.current) {
-        // Reset video to start
-        videoRef.current.currentTime = 0;
-        const playPromise = videoRef.current.play();
+        const video = videoRef.current;
+        
+        // Explicitly set sound settings
+        video.currentTime = 0;
+        video.muted = false; // Intend to play with sound
+        video.volume = 1.0;
+
+        const playPromise = video.play();
         
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                console.warn("Video autoplay blocked or failed:", error);
-                // If pure autoplay failure (not src error), we might want to show a "Tap to play" or just skip
-                // For this UI, we treat playback failure as a signal to skip if we can't recover
+                console.warn("Video autoplay with sound blocked:", error);
+                // Fallback: Play muted if sound is blocked (common on mobile without user gesture)
+                video.muted = true;
+                setIsMuted(true);
+                video.play().catch(e => console.error("Video playback completely failed:", e));
             });
         }
     }
   }, [videoSrc, stage]);
 
+  const toggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+        videoRef.current.muted = !videoRef.current.muted;
+        setIsMuted(videoRef.current.muted);
+    }
+  };
+
+  // Handle Sound Effects based on Stage
+  useEffect(() => {
+    if (stage === 'FLASH') {
+        // Play Reveal Sound (Whoosh/Explosion)
+        playAudio('/audio/reveal.mp3', AUDIO_SOURCES.reveal);
+    }
+    
+    if (stage === 'REVEAL' && hasHighRarity) {
+        // Play SSR Victory Sound slightly delayed
+        setTimeout(() => {
+            playAudio('/audio/ssr.mp3', AUDIO_SOURCES.ssr);
+        }, 300);
+    }
+  }, [stage, hasHighRarity]);
+
+  // Gyroscope Effect Logic
+  useEffect(() => {
+    if (stage !== 'REVEAL') return;
+
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      const { gamma, beta } = event;
+      if (gamma !== null && beta !== null) {
+        // Clamp values
+        const x = Math.min(Math.max(gamma, -45), 45); 
+        const y = Math.min(Math.max(beta, -45), 45);
+        setRotation({ x, y });
+      }
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const { innerWidth, innerHeight } = window;
+      const x = ((event.clientX / innerWidth) - 0.5) * 40; 
+      const y = ((event.clientY / innerHeight) - 0.5) * 40; 
+      setRotation({ x, y });
+    };
+
+    if (window.DeviceOrientationEvent && 'ontouchstart' in window) {
+      window.addEventListener('deviceorientation', handleOrientation);
+    } else {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [stage, previewCard]); 
+
   const handleVideoError = () => {
-    // If the local file failed, try the pack URL
     if (videoSrc === '/videos/draw.mp4') {
-        console.log("Local draw.mp4 not found, attempting fallback to pack URL.");
         if (pack.videoUrl) {
             setVideoSrc(pack.videoUrl);
         } else {
-            // No fallback available, skip video
             handleVideoEnded();
         }
     } else {
-        // We were already on fallback (or some other url) and it failed
-        console.log("Video source failed to load, skipping animation.");
         handleVideoEnded();
     }
   };
@@ -71,6 +157,16 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
     }, 1000);
   };
 
+  // Helper styles for Gyro
+  const transformStyle = {
+    transform: `perspective(1000px) rotateY(${rotation.x}deg) rotateX(${-rotation.y}deg)`,
+  };
+
+  const shineStyle = {
+    background: `linear-gradient(${135 + rotation.x}deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 30%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.1) 70%, rgba(255,255,255,0) 100%)`,
+    backgroundPosition: `${50 + (rotation.x * 2)}% ${50 + (rotation.y * 2)}%`,
+  };
+
   return (
     <div className={`fixed inset-0 z-[60] flex items-center justify-center overflow-hidden transition-colors duration-500 ${stage === 'REVEAL' ? 'bg-slate-50' : 'bg-black'}`}>
       
@@ -82,16 +178,33 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                 src={videoSrc}
                 className="w-full h-full object-cover"
                 playsInline
-                muted 
-                autoPlay
+                // Removed JSX 'muted' and 'autoPlay' to handle via Effect for better control
                 onEnded={handleVideoEnded}
                 onError={handleVideoError}
              />
-             <div className="absolute bottom-10 w-full text-center text-white/50 text-xs animate-pulse">
+             
+             {/* Sound Controls Overlay (If browser forces mute) */}
+             <div className="absolute top-4 left-4 z-50">
+                 {isMuted && (
+                    <button 
+                        onClick={toggleMute}
+                        className="bg-black/40 backdrop-blur text-white px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20 animate-pulse"
+                    >
+                        <VolumeX size={16} />
+                        <span className="text-xs">点击开启声音</span>
+                    </button>
+                 )}
+                 {!isMuted && (
+                    <button onClick={toggleMute} className="p-2 bg-black/20 text-white/50 rounded-full hover:bg-black/40">
+                         <Volume2 size={16} />
+                    </button>
+                 )}
+             </div>
+
+             <div className="absolute bottom-10 w-full text-center text-white/50 text-xs animate-pulse pointer-events-none">
                 {isSingle ? '单抽祈愿中...' : '十连祈愿中...'}
              </div>
              
-             {/* Skip Button (Optional UX improvement) */}
              <button 
                 onClick={handleVideoEnded}
                 className="absolute top-4 right-4 text-white/50 text-xs border border-white/20 px-2 py-1 rounded hover:bg-white/10"
@@ -101,7 +214,7 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
         </div>
       )}
 
-      {/* Stage 3: Reveal Result - LIGHT THEME */}
+      {/* Stage 3: Reveal Result */}
       {stage === 'REVEAL' && (
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-center animate-[fadeIn_0.5s_ease-out]">
             {/* Ambient Background Glow */}
@@ -109,7 +222,10 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
             
             {/* SINGLE PULL LAYOUT */}
             {isSingle ? (
-                <div className="relative w-[85vw] max-w-[400px] aspect-[9/16] animate-[zoomIn_0.4s_ease-out]">
+                <div 
+                    className="relative w-[85vw] max-w-[400px] aspect-[9/16] animate-[zoomIn_0.4s_ease-out]"
+                    style={transformStyle}
+                >
                     <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white shadow-2xl shadow-indigo-200 bg-white">
                         <SmartImage 
                             fallbackSrc={singleCard.imageUrl}
@@ -117,12 +233,19 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                             alt="New Card" 
                             className="w-full h-full object-cover" 
                         />
-                        <div className={`absolute inset-0 pointer-events-none mix-blend-screen opacity-50 ${
+                        {/* Shine Layer */}
+                        <div 
+                            className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-70 z-20"
+                            style={shineStyle}
+                        />
+
+                        {/* Rarity Overlay */}
+                        <div className={`absolute inset-0 pointer-events-none mix-blend-screen opacity-50 z-10 ${
                             singleCard.rarity === 'UR' ? 'bg-gradient-to-tr from-yellow-300 via-transparent to-transparent' : 
                             singleCard.rarity === 'SSR' ? 'bg-gradient-to-tr from-pink-300 via-transparent to-transparent' : ''
                         }`} />
 
-                        <div className="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent">
+                        <div className="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black/80 via-black/60 to-transparent z-30">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`px-2 py-0.5 text-xs font-bold rounded ${
                                     singleCard.rarity === 'UR' ? 'bg-yellow-400 text-black' :
@@ -136,6 +259,13 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                             <h3 className="text-white font-bold text-2xl mb-1">{singleCard.title}</h3>
                             <p className="text-white/80 text-xs">{singleCard.creator}</p>
                         </div>
+
+                         {/* Sparkles for High Rarity */}
+                        {(singleCard.rarity === 'UR' || singleCard.rarity === 'SSR') && (
+                            <div className="absolute -top-10 -right-10 text-yellow-300 animate-pulse z-40">
+                                <Sparkles size={48} />
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -148,7 +278,8 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                         {resultCards.map((card, idx) => (
                             <div 
                                 key={idx} 
-                                className="relative aspect-[9/14] rounded-lg overflow-hidden border border-gray-200 bg-white shadow-md animate-[slideUp_0.5s_ease-out]"
+                                onClick={() => setPreviewCard(card)}
+                                className="relative aspect-[9/14] rounded-lg overflow-hidden border border-gray-200 bg-white shadow-md animate-[slideUp_0.5s_ease-out] cursor-pointer active:scale-95 transition-transform"
                                 style={{ animationDelay: `${idx * 50}ms`, animationFillMode: 'both' }}
                             >
                                 <SmartImage 
@@ -169,16 +300,49 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                             </div>
                         ))}
                     </div>
+                    <p className="text-center text-xs text-gray-400 mt-2 animate-pulse">点击卡片查看详情</p>
                 </div>
             )}
             
             <button 
                 onClick={onComplete}
-                className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[200px] py-3 bg-slate-900 text-white font-bold rounded-full shadow-lg shadow-slate-400 active:scale-95 transition-transform"
+                className="absolute bottom-10 left-1/2 -translate-x-1/2 w-[200px] py-3 bg-slate-900 text-white font-bold rounded-full shadow-lg shadow-slate-400 active:scale-95 transition-transform z-50"
             >
                 全部收下
             </button>
         </div>
+      )}
+
+      {/* Preview Overlay for Multi-Pull with Gyro */}
+      {previewCard && (
+         <div className="absolute inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-out]">
+            <button 
+                onClick={() => setPreviewCard(null)}
+                className="absolute top-4 right-4 p-2 bg-white/20 rounded-full text-white z-50 hover:bg-white/30"
+            >
+                <X size={24} />
+            </button>
+            <div 
+                className="relative w-full max-w-[320px] aspect-[9/16]"
+                style={transformStyle}
+            >
+                 <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white/30 shadow-2xl">
+                    <SmartImage 
+                        fallbackSrc={previewCard.imageUrl}
+                        localId={previewCard.imageId || previewCard.id} 
+                        className="w-full h-full object-cover" 
+                    />
+                    <div 
+                        className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-70 z-20"
+                        style={shineStyle}
+                    />
+                    <div className="absolute bottom-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
+                        <h3 className="text-white font-bold text-xl">{previewCard.title}</h3>
+                        <p className="text-gray-300 text-xs">{previewCard.creator}</p>
+                    </div>
+                 </div>
+            </div>
+         </div>
       )}
 
       {/* White Flash Overlay */}

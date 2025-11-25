@@ -58,7 +58,7 @@ export const GyroCard: React.FC<GyroCardProps> = ({ card, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl animate-[fadeIn_0.3s_ease-out]">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-[fadeIn_0.3s_ease-out]">
       <button 
         onClick={onClose}
         className="absolute top-4 right-4 p-3 bg-white/10 rounded-full text-white z-50 hover:bg-white/20"

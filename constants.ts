@@ -15,6 +15,12 @@ export const CATEGORIES: { label: string; value: Category }[] = [
 
 const SAMPLE_SUMMON_VIDEO = "https://cdn.pixabay.com/video/2023/10/22/186115-877653483_tiny.mp4";
 
+// Audio Fallbacks
+export const AUDIO_SOURCES = {
+  reveal: "https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3", // Magical woosh
+  ssr: "https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" // Success chime
+};
+
 export const MOCK_PACKS: CardPack[] = [
   {
     id: '1',
