@@ -11,6 +11,10 @@ interface DrawAnimationProps {
 export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards, onComplete }) => {
   const [stage, setStage] = useState<'VIDEO' | 'FLASH' | 'REVEAL'>('VIDEO');
   const [showFlash, setShowFlash] = useState(false);
+  
+  // Logic: Default to local 'draw.mp4'. If it fails, fallback to pack.videoUrl.
+  const [videoSrc, setVideoSrc] = useState<string>('/videos/draw.mp4');
+  
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Single card shortcut for easier conditional rendering
@@ -18,20 +22,38 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
   const singleCard = resultCards[0];
 
   useEffect(() => {
-    if (!pack.videoUrl) {
-        setStage('FLASH');
-        triggerFlash();
-        return;
+    // Attempt to play whenever the videoSrc changes or component mounts
+    if (stage === 'VIDEO' && videoRef.current) {
+        // Reset video to start
+        videoRef.current.currentTime = 0;
+        const playPromise = videoRef.current.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.warn("Video autoplay blocked or failed:", error);
+                // If pure autoplay failure (not src error), we might want to show a "Tap to play" or just skip
+                // For this UI, we treat playback failure as a signal to skip if we can't recover
+            });
+        }
     }
+  }, [videoSrc, stage]);
 
-    if (videoRef.current) {
-        videoRef.current.play().catch(err => {
-            console.error("Video play failed", err);
-            setStage('FLASH');
-            triggerFlash();
-        });
+  const handleVideoError = () => {
+    // If the local file failed, try the pack URL
+    if (videoSrc === '/videos/draw.mp4') {
+        console.log("Local draw.mp4 not found, attempting fallback to pack URL.");
+        if (pack.videoUrl) {
+            setVideoSrc(pack.videoUrl);
+        } else {
+            // No fallback available, skip video
+            handleVideoEnded();
+        }
+    } else {
+        // We were already on fallback (or some other url) and it failed
+        console.log("Video source failed to load, skipping animation.");
+        handleVideoEnded();
     }
-  }, [pack.videoUrl]);
+  };
 
   const handleVideoEnded = () => {
     setStage('FLASH');
@@ -52,19 +74,29 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
     <div className={`fixed inset-0 z-[60] flex items-center justify-center overflow-hidden transition-colors duration-500 ${stage === 'REVEAL' ? 'bg-slate-50' : 'bg-black'}`}>
       
       {/* Stage 1: Full Screen Video */}
-      {stage === 'VIDEO' && pack.videoUrl && (
+      {stage === 'VIDEO' && (
         <div className="absolute inset-0 w-full h-full bg-black">
              <video 
                 ref={videoRef}
-                src={pack.videoUrl}
+                src={videoSrc}
                 className="w-full h-full object-cover"
                 playsInline
                 muted 
+                autoPlay
                 onEnded={handleVideoEnded}
+                onError={handleVideoError}
              />
              <div className="absolute bottom-10 w-full text-center text-white/50 text-xs animate-pulse">
                 {isSingle ? '单抽祈愿中...' : '十连祈愿中...'}
              </div>
+             
+             {/* Skip Button (Optional UX improvement) */}
+             <button 
+                onClick={handleVideoEnded}
+                className="absolute top-4 right-4 text-white/50 text-xs border border-white/20 px-2 py-1 rounded hover:bg-white/10"
+             >
+                跳过
+             </button>
         </div>
       )}
 
