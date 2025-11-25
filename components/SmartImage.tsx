@@ -19,10 +19,9 @@ export const SmartImage: React.FC<SmartImageProps> = ({ fallbackSrc, localId, ..
     // Priority 2: Try local file if ID exists and we haven't failed yet
     if (localId) {
       // Logic: If we are in a deployed environment, we expect images in /cards/{id}.jpg
-      // We strip non-numeric characters if your IDs are complex, or just use ID directly.
-      // For this app, let's try to match the ID directly.
-      // Example: ID '1' -> '/cards/1.jpg'
-      const fileName = localId.replace(/^c/, ''); // Optional: clean 'c1' to '1' if you prefer numeric files
+      // We use the ID exactly as the filename. 
+      // Example: Pack ID '1' -> '/cards/1.jpg', Card ID 'c1' -> '/cards/c1.jpg'
+      const fileName = localId; 
       setSrc(`/cards/${fileName}.jpg`);
       setHasError(false);
     } else {

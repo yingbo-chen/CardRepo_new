@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { Card } from '../types';
@@ -70,7 +71,7 @@ export const GyroCard: React.FC<GyroCardProps> = ({ card, onClose }) => {
         <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-2xl shadow-primary/30 border border-white/20 bg-card">
           <SmartImage 
             fallbackSrc={card.imageUrl} 
-            localId={card.id}
+            localId={card.imageId || card.id}
             alt={card.title} 
             className="w-full h-full object-cover"
           />

@@ -2,7 +2,8 @@
 export type Category = 'Actor' | 'Singer' | 'Coser' | 'Sports' | 'Brand' | 'IP' | 'Streamer' | 'Dance';
 
 export interface Card {
-  id: string;
+  id: string; // Unique instance ID (e.g., "card-123-uuid")
+  imageId?: string; // ID corresponding to the image file (e.g., "1" for "1.jpg")
   title: string;
   imageUrl: string;
   rarity: 'R' | 'SR' | 'SSR' | 'UR';

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card } from '../types';
 import { Grid3X3, Filter } from 'lucide-react';
@@ -39,7 +40,7 @@ export const Collection: React.FC<CollectionProps> = ({ cards, onSelectCard }) =
           >
             <SmartImage 
               fallbackSrc={card.imageUrl} 
-              localId={card.id}
+              localId={card.imageId || card.id}
               alt={card.title} 
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" 
             />

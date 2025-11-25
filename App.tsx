@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigation } from './components/Navigation';
 import { TopBar } from './components/TopBar';
@@ -69,9 +70,14 @@ export default function App() {
             cardImage = customImages[Math.floor(Math.random() * customImages.length)];
         }
 
+        // Generate a mock 'imageId' (e.g., '1', '2', '20') to simulate local files
+        // This assumes the user might have files like /cards/1.jpg, /cards/2.jpg etc.
+        const randomImageId = (Math.floor(Math.random() * 20) + 1).toString();
+
         const randomCard: Card = {
             id: `new-${Date.now()}-${i}`,
-            title: customImages.length > 0 ? `自定义卡片 #${Math.floor(Math.random() * 100)}` : '未知异画',
+            imageId: randomImageId, // IMPORTANT: valid localId for SmartImage
+            title: customImages.length > 0 ? `自定义卡片 #${Math.floor(Math.random() * 100)}` : `神秘卡片 #${randomImageId}`,
             imageUrl: cardImage,
             rarity: Math.random() > 0.9 ? 'UR' : Math.random() > 0.6 ? 'SSR' : 'R',
             creator: pack.creator.name,

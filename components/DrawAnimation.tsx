@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { CardPack, Card } from '../types';
 import { SmartImage } from './SmartImage';
@@ -112,7 +113,7 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                     <div className="relative w-full h-full rounded-2xl overflow-hidden border border-white shadow-2xl shadow-indigo-200 bg-white">
                         <SmartImage 
                             fallbackSrc={singleCard.imageUrl}
-                            localId={singleCard.id} 
+                            localId={singleCard.imageId || singleCard.id} 
                             alt="New Card" 
                             className="w-full h-full object-cover" 
                         />
@@ -152,7 +153,7 @@ export const DrawAnimation: React.FC<DrawAnimationProps> = ({ pack, resultCards,
                             >
                                 <SmartImage 
                                     fallbackSrc={card.imageUrl} 
-                                    localId={card.id}
+                                    localId={card.imageId || card.id}
                                     className="w-full h-full object-cover" 
                                 />
                                 <div className="absolute top-1 left-1">

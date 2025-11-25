@@ -114,6 +114,7 @@ export const MOCK_PACKS: CardPack[] = [
 export const MOCK_COLLECTION: Card[] = [
   {
     id: 'c1',
+    imageId: 'c1',
     title: '霓虹战士 - 01',
     imageUrl: 'https://picsum.photos/400/711?random=10',
     rarity: 'SSR',
@@ -122,6 +123,7 @@ export const MOCK_COLLECTION: Card[] = [
   },
   {
     id: 'c2',
+    imageId: 'c2',
     title: '夏日海滩',
     imageUrl: 'https://picsum.photos/400/711?random=11',
     rarity: 'SR',
@@ -130,6 +132,7 @@ export const MOCK_COLLECTION: Card[] = [
   },
   {
     id: 'c3',
+    imageId: 'c3',
     title: '机械之心',
     imageUrl: 'https://picsum.photos/400/711?random=12',
     rarity: 'UR',
@@ -138,6 +141,7 @@ export const MOCK_COLLECTION: Card[] = [
   },
   {
     id: 'c4',
+    imageId: 'c4',
     title: '樱花祭',
     imageUrl: 'https://picsum.photos/400/711?random=13',
     rarity: 'R',
