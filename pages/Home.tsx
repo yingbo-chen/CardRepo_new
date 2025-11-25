@@ -42,7 +42,7 @@ export const Home: React.FC<HomeProps> = ({ packs, onPackClick }) => {
         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
           {CATEGORIES.map((cat, idx) => (
             <button
-              key={cat.value}
+              key={cat.label}
               className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all border ${
                 idx === 0 
                   ? 'bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-200' 
