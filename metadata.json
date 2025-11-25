@@ -1,0 +1,9 @@
+{
+  "name": "Copy of CardVerse - ACG Card Collection",
+  "description": "A premium digital card collection platform for ACG enthusiasts. Collect, trade, and explore exclusive cards from your favorite creators, cosplayers, and IPs.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
